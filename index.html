@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>インフルエンザ・新型コロナ 療養解除日シミュレーター（成人向け）</title>
+<meta name="description" content="インフルエンザ・新型コロナの発症日と解熱日から、出勤・外出を再開できる目安の日を計算します（成人向け）。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="インフルエンザ・新型コロナ 療養解除日シミュレーター">
+<meta property="og:description" content="発症日と解熱日から、出勤・外出を再開できる目安の日を計算します（成人向け）。">
+<meta name="theme-color" content="#0f766e">
+<style>
+  body { margin: 0; padding: 24px 16px; background: #f3f6f8; }
+
+  /* ここから下は #kaijo-sim 内に閉じているので、既存サイトへそのまま貼り付け可能 */
+  #kaijo-sim {
+    --ks-main: #0f766e;
+    --ks-main-dark: #0b5a54;
+    --ks-main-pale: #e6f4f2;
+    --ks-warn: #b45309;
+    --ks-warn-pale: #fff7e6;
+    --ks-text: #1f2937;
+    --ks-sub: #5b6676;
+    --ks-line: #d5dce3;
+    max-width: 640px; margin: 0 auto; background: #fff; color: var(--ks-text);
+    border: 1px solid var(--ks-line); border-radius: 14px; overflow: hidden;
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
+    font-size: 16px; line-height: 1.7;
+  }
+  #kaijo-sim *, #kaijo-sim *::before, #kaijo-sim *::after { box-sizing: border-box; }
+  #kaijo-sim .ks-head { background: var(--ks-main); color: #fff; padding: 18px 20px; text-align: center; }
+  #kaijo-sim .ks-head h2 { margin: 0; font-size: 1.2rem; line-height: 1.4; color: #fff; }
+  #kaijo-sim .ks-head p { margin: 4px 0 0; font-size: .82rem; opacity: .9; }
+  #kaijo-sim .ks-body { padding: 20px; }
+  #kaijo-sim fieldset { border: 0; padding: 0; margin: 0 0 20px; min-width: 0; }
+  #kaijo-sim legend, #kaijo-sim .ks-label { display: block; padding: 0; margin-bottom: 8px; font-weight: 700; font-size: .95rem; }
+  #kaijo-sim .ks-num {
+    display: inline-flex; align-items: center; justify-content: center; width: 1.6em; height: 1.6em;
+    margin-right: 6px; border-radius: 50%; background: var(--ks-main); color: #fff; font-size: .85em;
+  }
+  #kaijo-sim .ks-hint { margin: 6px 0 0; font-size: .8rem; color: var(--ks-sub); line-height: 1.5; }
+
+  #kaijo-sim .ks-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  #kaijo-sim .ks-seg label { position: relative; cursor: pointer; }
+  #kaijo-sim .ks-seg input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+  #kaijo-sim .ks-seg span {
+    display: block; padding: 12px 8px; text-align: center; font-weight: 700; line-height: 1.4;
+    border: 2px solid var(--ks-line); border-radius: 10px; background: #fff; transition: .15s;
+  }
+  #kaijo-sim .ks-seg span small { display: block; font-weight: 400; font-size: .75rem; color: var(--ks-sub); }
+  #kaijo-sim .ks-seg input:checked + span { border-color: var(--ks-main); background: var(--ks-main-pale); color: var(--ks-main-dark); }
+  #kaijo-sim .ks-seg input:focus-visible + span { outline: 3px solid #7dd3c8; outline-offset: 2px; }
+
+  #kaijo-sim input[type="date"] {
+    width: 100%; padding: 11px 12px; font: inherit; color: inherit; background: #fff;
+    border: 2px solid var(--ks-line); border-radius: 10px;
+  }
+  #kaijo-sim input[type="date"]:focus { outline: none; border-color: var(--ks-main); }
+  #kaijo-sim input[type="date"]:disabled { background: #f1f3f5; color: #9aa3ad; }
+  #kaijo-sim .ks-check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: .9rem; cursor: pointer; }
+  #kaijo-sim .ks-check input { width: 18px; height: 18px; accent-color: var(--ks-main); }
+  #kaijo-sim [hidden] { display: none !important; }
+
+  #kaijo-sim .ks-btn {
+    width: 100%; padding: 14px; font: inherit; font-weight: 700; font-size: 1.05rem; color: #fff;
+    background: var(--ks-main); border: 0; border-radius: 999px; cursor: pointer; transition: .15s;
+  }
+  #kaijo-sim .ks-btn:hover { background: var(--ks-main-dark); }
+  #kaijo-sim .ks-error { margin: 12px 0 0; color: #b91c1c; font-size: .9rem; font-weight: 700; }
+
+  #kaijo-sim .ks-result { margin-top: 22px; border: 2px solid var(--ks-main); border-radius: 12px; overflow: hidden; }
+  #kaijo-sim .ks-result.is-tentative { border-color: var(--ks-warn); }
+  #kaijo-sim .ks-result-main { padding: 18px 16px; text-align: center; background: var(--ks-main-pale); }
+  #kaijo-sim .ks-result.is-tentative .ks-result-main { background: var(--ks-warn-pale); }
+  #kaijo-sim .ks-result-cap { margin: 0; font-size: .9rem; font-weight: 700; color: var(--ks-main-dark); }
+  #kaijo-sim .ks-result.is-tentative .ks-result-cap { color: var(--ks-warn); }
+  #kaijo-sim .ks-result-date { margin: 2px 0; font-size: 1.9rem; font-weight: 800; line-height: 1.3; }
+  #kaijo-sim .ks-result-sub { margin: 0; font-size: .85rem; color: var(--ks-sub); }
+  #kaijo-sim .ks-result-detail { padding: 16px; }
+  #kaijo-sim .ks-result-detail h3 { margin: 0 0 6px; font-size: .9rem; }
+  #kaijo-sim .ks-reasons { margin: 0 0 16px; padding: 0; list-style: none; font-size: .88rem; }
+  #kaijo-sim .ks-reasons li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed var(--ks-line); }
+  #kaijo-sim .ks-reasons li b { white-space: nowrap; }
+  #kaijo-sim .ks-reasons li.is-key b { color: var(--ks-main-dark); }
+  #kaijo-sim .ks-reasons li.is-key b::after { content: " ◀ 決め手"; font-size: .75rem; }
+
+  #kaijo-sim .ks-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 4px; margin-bottom: 14px; }
+  #kaijo-sim .ks-day { padding: 6px 2px; text-align: center; border-radius: 8px; background: #eef1f4; font-size: .72rem; line-height: 1.35; }
+  #kaijo-sim .ks-day b { display: block; font-size: .88rem; }
+  #kaijo-sim .ks-day i { display: block; font-style: normal; color: var(--ks-sub); }
+  #kaijo-sim .ks-day.is-fever { background: #fde2e2; }
+  #kaijo-sim .ks-day.is-ok { background: var(--ks-main); color: #fff; }
+  #kaijo-sim .ks-day.is-ok i { color: #d7f0ed; }
+  #kaijo-sim .ks-note { margin: 0; padding: 10px 12px; border-radius: 8px; background: #f6f8fa; font-size: .82rem; line-height: 1.6; }
+  #kaijo-sim .ks-note + .ks-note { margin-top: 8px; }
+  #kaijo-sim .ks-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  #kaijo-sim .ks-act {
+    padding: 11px 6px; font: inherit; font-weight: 700; font-size: .92rem; line-height: 1.4; text-align: center;
+    border: 2px solid var(--ks-main); border-radius: 999px; background: #fff; color: var(--ks-main-dark); cursor: pointer; transition: .15s;
+  }
+  #kaijo-sim .ks-act:hover { background: var(--ks-main-pale); }
+  #kaijo-sim .ks-act.is-line { border-color: #06c755; background: #06c755; color: #fff; }
+  #kaijo-sim .ks-act.is-line:hover { background: #05b04c; }
+  #kaijo-sim .ks-foot { padding: 14px 20px 18px; border-top: 1px solid var(--ks-line); font-size: .75rem; color: var(--ks-sub); line-height: 1.6; }
+  #kaijo-sim .ks-foot p { margin: 0 0 4px; }
+</style>
+</head>
+<body>
+
+<div id="kaijo-sim">
+  <div class="ks-head">
+    <h2>インフルエンザ・新型コロナ<br>療養解除日シミュレーター</h2>
+    <p>成人（社会人）向け</p>
+  </div>
+
+  <form class="ks-body" id="ks-form" novalidate>
+    <fieldset>
+      <legend><span class="ks-num">1</span>疾患を選択</legend>
+      <div class="ks-seg">
+        <label><input type="radio" name="disease" value="flu" checked><span>インフルエンザ</span></label>
+        <label><input type="radio" name="disease" value="covid"><span>新型コロナ</span></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <label class="ks-label" for="ks-onset"><span class="ks-num">2</span>発症日</label>
+      <input type="date" id="ks-onset" required>
+      <p class="ks-hint">発熱などの症状が出た日（この日を0日目として数えます）。無症状の場合は検査の検体を採取した日。</p>
+    </fieldset>
+
+    <fieldset>
+      <label class="ks-label" for="ks-fever"><span class="ks-num">3</span><span id="ks-fever-label">解熱日</span></label>
+      <input type="date" id="ks-fever">
+      <p class="ks-hint" id="ks-fever-hint"></p>
+      <label class="ks-check"><input type="checkbox" id="ks-nofever">まだ解熱していない</label>
+    </fieldset>
+
+    <fieldset id="ks-time-field" hidden>
+      <legend><span class="ks-num">4</span>解熱・症状軽快した時間帯</legend>
+      <div class="ks-seg">
+        <label><input type="radio" name="time" value="early"><span>早朝<small>起床時にはもう下がっていた</small></span></label>
+        <label><input type="radio" name="time" value="later" checked><span>日中〜夜／不明<small>朝以降に下がった</small></span></label>
+      </div>
+      <p class="ks-hint">新型コロナは「症状軽快後24時間」が目安のため、時間帯で1日変わることがあります。</p>
+    </fieldset>
+
+    <button type="submit" class="ks-btn">解除予定日を計算する</button>
+    <p class="ks-error" id="ks-error" role="alert" hidden></p>
+
+    <div id="ks-result" aria-live="polite"></div>
+  </form>
+
+  <div class="ks-foot">
+    <p>※ 成人の療養期間に法的な定めはなく、本結果は目安です。勤務先の就業規則がある場合はそちらに従ってください。</p>
+    <p>※ インフルエンザ：学校保健安全法施行規則の基準（発症後5日かつ解熱後2日）を準用。新型コロナ：厚生労働省事務連絡（令和5年4月14日）の推奨（発症後5日かつ症状軽快後24時間）に基づく。</p>
+    <p>※ 症状が重い・長引く場合は医療機関にご相談ください。</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var WEEK = ['日', '月', '火', '水', '木', '金', '土'];
+  var root = document.getElementById('kaijo-sim');
+  var form = root.querySelector('#ks-form');
+  var onsetEl = root.querySelector('#ks-onset');
+  var feverEl = root.querySelector('#ks-fever');
+  var noFeverEl = root.querySelector('#ks-nofever');
+  var timeField = root.querySelector('#ks-time-field');
+  var errorEl = root.querySelector('#ks-error');
+  var resultEl = root.querySelector('#ks-result');
+  var last = null;
+
+  function parseDate(str) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str);
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+  }
+  function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+  function diffDays(a, b) { return Math.round((a - b) / 86400000); }
+  function fmt(d) { return (d.getMonth() + 1) + '月' + d.getDate() + '日（' + WEEK[d.getDay()] + '）'; }
+  function fmtShort(d) { return (d.getMonth() + 1) + '/' + d.getDate(); }
+  function checked(name) { return form.querySelector('input[name="' + name + '"]:checked').value; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  /**
+   * 解除予定日（外出・出勤を再開できる最初の日）を計算する。
+   *   共通          : 発症日を0日目として5日経過 → 発症日+6日
+   *   インフルエンザ: 解熱日を0日目として2日経過 → 解熱日+3日
+   *   新型コロナ    : 症状軽快後24時間経過     → 早朝に軽快なら+1日、それ以外は+2日
+   * fever が null（未解熱）の場合は発症日基準の最短日だけを返す。
+   */
+  function calc(disease, onset, fever, time) {
+    var byOnset = addDays(onset, 6);
+    if (!fever) return { release: byOnset, byOnset: byOnset, byFever: null, tentative: true };
+    var wait = disease === 'flu' ? 3 : (time === 'early' ? 1 : 2);
+    var byFever = addDays(fever, wait);
+    return { release: byFever > byOnset ? byFever : byOnset, byOnset: byOnset, byFever: byFever, tentative: false };
+  }
+
+  function syncForm() {
+    var covid = checked('disease') === 'covid';
+    root.querySelector('#ks-fever-label').textContent = covid ? '解熱・症状軽快日' : '解熱日';
+    root.querySelector('#ks-fever-hint').textContent = covid
+      ? '解熱剤を使わずに熱が下がり、咳・のどの痛みなどが軽くなってきた日。'
+      : '解熱剤を使わずに熱が下がった日（目安37.5℃未満）。';
+    feverEl.disabled = noFeverEl.checked;
+    feverEl.min = onsetEl.value;
+    timeField.hidden = !covid || noFeverEl.checked;
+    errorEl.hidden = true;
+    resultEl.innerHTML = '';
+  }
+
+  function showError(msg) {
+    errorEl.textContent = msg;
+    errorEl.hidden = false;
+    resultEl.innerHTML = '';
+  }
+
+  function render(disease, onset, fever, r) {
+    var covid = disease === 'covid';
+    var feverWord = covid ? '症状軽快' : '解熱';
+    var html = '<div class="ks-result' + (r.tentative ? ' is-tentative' : '') + '">';
+
+    html += '<div class="ks-result-main">'
+      + '<p class="ks-result-cap">' + (r.tentative ? '最短の解除予定日' : '解除予定日（出勤・外出の目安）') + '</p>'
+      + '<p class="ks-result-date">' + (r.tentative ? '最短 ' : '') + esc(fmt(r.release)) + '</p>'
+      + '<p class="ks-result-sub">発症日を0日目として ' + diffDays(r.release, onset) + '日目から'
+      + '（' + esc(fmt(addDays(r.release, -1))) + ' まで療養）</p></div>';
+
+    html += '<div class="ks-result-detail"><h3>計算の内訳</h3><ul class="ks-reasons">';
+    var onsetKey = !r.byFever || r.byOnset >= r.byFever;
+    html += '<li class="' + (onsetKey ? 'is-key' : '') + '"><span>発症後5日を経過</span><b>' + esc(fmt(r.byOnset)) + '〜</b></li>';
+    if (r.byFever) {
+      var rule = covid ? '症状軽快後24時間を経過' : '解熱後2日を経過';
+      html += '<li class="' + (r.byFever >= r.byOnset ? 'is-key' : '') + '"><span>' + rule + '</span><b>' + esc(fmt(r.byFever)) + '〜</b></li>';
+    } else {
+      html += '<li><span>' + (covid ? '症状軽快後24時間を経過' : '解熱後2日を経過') + '</span><b>解熱後に確定</b></li>';
+    }
+    html += '</ul>';
+
+    html += '<div class="ks-days">';
+    var total = diffDays(r.release, onset);
+    for (var i = 0; i <= total; i++) {
+      var d = addDays(onset, i);
+      var cls = '', label = '療養';
+      if (i === total) { cls = ' is-ok'; label = r.tentative ? '最短OK' : '外出OK'; }
+      else if (fever && diffDays(d, fever) === 0) { label = feverWord; }
+      else if (i === 0) { cls = ' is-fever'; label = '発症'; }
+      else if (!fever || d < fever) { cls = ' is-fever'; }
+      html += '<div class="ks-day' + cls + '"><i>' + i + '日目</i><b>' + fmtShort(d) + '</b>' + label + '</div>';
+    }
+    html += '</div>';
+
+    if (r.tentative) {
+      var limit = addDays(onset, covid ? 4 : 3);
+      html += '<p class="ks-note">⚠ この日に解除となるのは <b>' + esc(fmt(limit)) + '</b> までに'
+        + (covid ? '解熱・症状軽快した' : '解熱した') + '場合です。それより遅れると解除日も後ろにずれます。解熱したら日付を入れて再計算してください。</p>';
+    }
+    if (covid) {
+      html += '<p class="ks-note">😷 発症後10日間（<b>' + esc(fmt(addDays(onset, 10))) + '</b> まで）はウイルスを排出する可能性があります。不織布マスクの着用や、高齢者などハイリスクの方との接触を控えることが推奨されています。</p>';
+    } else {
+      html += '<p class="ks-note">😷 解除後も咳などの症状が残る間は、マスクの着用など咳エチケットを心がけてください。</p>';
+    }
+    html += '<div class="ks-actions">'
+      + '<button type="button" class="ks-act" data-act="save">画像を保存</button>'
+      + '<button type="button" class="ks-act is-line" data-act="line">LINEで送る</button>'
+      + '</div>';
+    html += '</div></div>';
+    resultEl.innerHTML = html;
+    last = { disease: disease, onset: onset, fever: fever, r: r };
+  }
+
+  // 画像・LINE共有用に、直近の結果をテキスト項目へまとめる
+  function summarize(L) {
+    var covid = L.disease === 'covid', r = L.r;
+    var rule = covid ? '症状軽快後24時間を経過' : '解熱後2日を経過';
+    return {
+      disease: covid ? '新型コロナ' : 'インフルエンザ',
+      feverLabel: covid ? '解熱・軽快日' : '解熱日',
+      feverText: L.fever ? fmt(L.fever) : 'まだ解熱していない',
+      cap: r.tentative ? '最短の解除予定日' : '解除予定日（出勤・外出の目安）',
+      date: (r.tentative ? '最短 ' : '') + fmt(r.release),
+      sub: '発症日を0日目として ' + diffDays(r.release, L.onset) + '日目から（' + fmt(addDays(r.release, -1)) + ' まで療養）',
+      reasons: [
+        ['発症後5日を経過', fmt(r.byOnset) + '〜'],
+        [rule, r.byFever ? fmt(r.byFever) + '〜' : '解熱後に確定']
+      ],
+      note: r.tentative
+        ? '※ ' + fmt(addDays(L.onset, covid ? 4 : 3)) + ' までに解熱した場合の最短日です。解熱が遅れると解除日も延びます。'
+        : (covid ? '※ 発症後10日間（' + fmt(addDays(L.onset, 10)) + ' まで）はマスク着用などが推奨されています。' : ''),
+      disclaimer: '※ 成人の療養期間に法的な定めはなく、目安です。勤務先の規定がある場合はそちらに従ってください。'
+    };
+  }
+
+  function wrapText(ctx, text, maxW) {
+    var lines = [], line = '';
+    for (var i = 0; i < text.length; i++) {
+      if (ctx.measureText(line + text[i]).width > maxW) { lines.push(line); line = ''; }
+      line += text[i];
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function drawImage(L) {
+    var s = summarize(L), tentative = L.r.tentative;
+    var FONT = '"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif';
+    var MAIN = '#0f766e', DARK = '#0b5a54', TEXT = '#1f2937', SUB = '#5b6676';
+    var accent = tentative ? '#b45309' : MAIN, pale = tentative ? '#fff7e6' : '#e6f4f2';
+    var W = 720, PAD = 36, IN = W - PAD * 2, SCALE = 2;
+    var COLS = 7, GAP = 6, CW = (IN - GAP * (COLS - 1)) / COLS, CH = 66;
+    var total = diffDays(L.r.release, L.onset), rows = Math.ceil((total + 1) / COLS);
+
+    var canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+    function font(size, bold) { ctx.font = (bold ? '700 ' : '400 ') + size + 'px ' + FONT; }
+    font(14); var noteLines = s.note ? wrapText(ctx, s.note, IN) : [];
+    font(12); var discLines = wrapText(ctx, s.disclaimer, IN);
+
+    var H = 100 + 24 + 3 * 34 + 14 + 132 + 30 + 2 * 34 + 20 + rows * (CH + GAP) + 14
+      + noteLines.length * 22 + (noteLines.length ? 10 : 0) + discLines.length * 19 + 28;
+    canvas.width = W * SCALE; canvas.height = H * SCALE;
+    ctx.scale(SCALE, SCALE);
+    ctx.textBaseline = 'middle';
+
+    function box(x, y, w, h, r) {
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
+    }
+    function text(str, x, y, size, color, bold, align) {
+      font(size, bold); ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.fillText(str, x, y);
+    }
+
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = MAIN; ctx.fillRect(0, 0, W, 100);
+    text('インフルエンザ・新型コロナ 療養解除日の目安', W / 2, 42, 24, '#fff', true, 'center');
+    text('成人（社会人）向け', W / 2, 74, 14, '#d7f0ed', false, 'center');
+
+    var y = 124;
+    [['疾患', s.disease], ['発症日', fmt(L.onset)], [s.feverLabel, s.feverText]].forEach(function (row) {
+      text(row[0], PAD, y + 17, 16, SUB);
+      text(row[1], PAD + 130, y + 17, 18, TEXT, true);
+      y += 34;
+    });
+
+    y += 14;
+    box(PAD, y, IN, 132, 14); ctx.fillStyle = pale; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = accent; ctx.stroke();
+    text(s.cap, W / 2, y + 28, 16, tentative ? accent : DARK, true, 'center');
+    text(s.date, W / 2, y + 68, 40, TEXT, true, 'center');
+    text(s.sub, W / 2, y + 108, 14, SUB, false, 'center');
+    y += 132 + 30;
+
+    s.reasons.forEach(function (row) {
+      text(row[0], PAD, y + 17, 15, TEXT);
+      text(row[1], W - PAD, y + 17, 15, TEXT, true, 'right');
+      ctx.fillStyle = '#d5dce3'; ctx.fillRect(PAD, y + 33, IN, 1);
+      y += 34;
+    });
+
+    y += 20;
+    for (var i = 0; i <= total; i++) {
+      var d = addDays(L.onset, i), x = PAD + (i % COLS) * (CW + GAP), cy = y + Math.floor(i / COLS) * (CH + GAP);
+      var bg = '#eef1f4', fg = TEXT, sub = SUB, label = '療養';
+      if (i === total) { bg = MAIN; fg = '#fff'; sub = '#d7f0ed'; label = tentative ? '最短OK' : '外出OK'; }
+      else if (L.fever && diffDays(d, L.fever) === 0) { label = L.disease === 'covid' ? '症状軽快' : '解熱'; }
+      else if (i === 0) { bg = '#fde2e2'; label = '発症'; }
+      else if (!L.fever || d < L.fever) { bg = '#fde2e2'; }
+      box(x, cy, CW, CH, 8); ctx.fillStyle = bg; ctx.fill();
+      text(i + '日目', x + CW / 2, cy + 14, 11, sub, false, 'center');
+      text(fmtShort(d), x + CW / 2, cy + 33, 15, fg, true, 'center');
+      text(label, x + CW / 2, cy + 52, 12, fg, false, 'center');
+    }
+    y += rows * (CH + GAP) + 14;
+
+    noteLines.forEach(function (ln) { text(ln, PAD, y + 11, 14, TEXT); y += 22; });
+    if (noteLines.length) y += 10;
+    discLines.forEach(function (ln) { text(ln, PAD, y + 9, 12, SUB); y += 19; });
+    return canvas;
+  }
+
+  function saveImage(L) {
+    drawImage(L).toBlob(function (blob) {
+      var a = document.createElement('a'), r = L.r.release;
+      a.href = URL.createObjectURL(blob);
+      a.download = '療養解除日_' + r.getFullYear() + ('0' + (r.getMonth() + 1)).slice(-2) + ('0' + r.getDate()).slice(-2) + '.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    }, 'image/png');
+  }
+
+  function sendLine(L) {
+    var s = summarize(L);
+    var lines = [
+      '【療養解除日の目安】',
+      '疾患：' + s.disease,
+      '発症日：' + fmt(L.onset),
+      s.feverLabel + '：' + s.feverText,
+      (L.r.tentative ? '最短の解除予定日：' : '解除予定日：') + fmt(L.r.release) + '〜（発症から' + diffDays(L.r.release, L.onset) + '日目）'
+    ];
+    if (s.note) lines.push(s.note);
+    lines.push('※ 目安です。勤務先の規定がある場合はそちらに従ってください。');
+    if (/^https?:/.test(location.protocol)) lines.push(location.origin + location.pathname);
+    window.open('https://line.me/R/share?text=' + encodeURIComponent(lines.join('\n')), '_blank', 'noopener');
+  }
+
+  resultEl.addEventListener('click', function (e) {
+    var act = e.target.getAttribute && e.target.getAttribute('data-act');
+    if (!act || !last) return;
+    if (act === 'save') saveImage(last); else sendLine(last);
+  });
+
+  form.addEventListener('change', syncForm);
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    errorEl.hidden = true;
+    var disease = checked('disease');
+    var onset = parseDate(onsetEl.value);
+    var fever = noFeverEl.checked ? null : parseDate(feverEl.value);
+    if (!onset) return showError('発症日を選択してください。');
+    if (!noFeverEl.checked && !fever) return showError('解熱日を選択するか、「まだ解熱していない」にチェックを入れてください。');
+    if (fever && fever < onset) return showError('解熱日は発症日以降の日付を選択してください。');
+    render(disease, onset, fever, calc(disease, onset, fever, checked('time')));
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  syncForm();
+})();
+</script>
+</body>
+</html>
